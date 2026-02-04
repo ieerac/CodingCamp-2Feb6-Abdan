@@ -9,12 +9,11 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1>📝 My To-Do List</h1>
+            <h1>📝 To-Do List</h1>
             <p class="subtitle">Organize your tasks efficiently</p>
         </header>
-
-        <!-- Form Input -->
-        <form id="todoForm" class="form-section">
+    
+    <form id="todoForm" class="form-section">
             <div class="form-group">
                 <label for="todoText">Task Description</label>
                 <input 
@@ -52,7 +51,6 @@
             <button type="submit" class="btn btn-primary">➕ Add Task</button>
         </form>
 
-        <!-- Filter Section -->
         <div class="filter-section">
             <div class="filter-group">
                 <label for="filterStatus">Filter by Status:</label>
@@ -76,7 +74,7 @@
             <button id="clearAllBtn" class="btn btn-danger btn-small">🗑️ Clear Completed</button>
         </div>
 
-        <!-- Stats Section -->
+
         <div class="stats-section">
             <div class="stat">
                 <span class="stat-label">Total:</span>
@@ -92,7 +90,6 @@
             </div>
         </div>
 
-        <!-- To-Do List -->
         <div class="list-container">
             <ul id="todoList" class="todo-list"></ul>
             <div id="emptyMessage" class="empty-message">
