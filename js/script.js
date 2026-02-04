@@ -1,316 +1,337 @@
+// ============================================
+// TO-DO LIST APPLICATION
+// ============================================
+
+// Data storage (menggunakan localStorage untuk persist data)
+let todos = [];
+
 // DOM Elements
 const todoForm = document.getElementById('todoForm');
-const todoText = document.getElementById('todoText');
-const todoDue = document.getElementById('todoDue');
+const todoInput = document.getElementById('todoInput');
+const todoDate = document.getElementById('todoDate');
 const todoTime = document.getElementById('todoTime');
 const todoList = document.getElementById('todoList');
-const emptyMessage = document.getElementById('emptyMessage');
-const filterStatus = document.getElementById('filterStatus');
-const sortBy = document.getElementById('sortBy');
-const clearAllBtn = document.getElementById('clearAllBtn');
-const totalCount = document.getElementById('totalCount');
-const pendingCount = document.getElementById('pendingCount');
-const completedCount = document.getElementById('completedCount');
-const textError = document.getElementById('textError');
-const dateError = document.getElementById('dateError');
-const timeError = document.getElementById('timeError');
+const taskCount = document.getElementById('taskCount');
+const filterButtons = document.querySelectorAll('.filter-btn');
+const filterDateInput = document.getElementById('filterDate');
+const currentTimeDisplay = document.getElementById('currentTime');
 
-// State
-let todos = JSON.parse(localStorage.getItem('todos')) || [];
+// Filter state
 let currentFilter = 'all';
-let currentSort = 'date-asc';
+let currentDateFilter = '';
 
-// Set minimum date to today
-const today = new Date().toISOString().split('T')[0];
-todoDue.setAttribute('min', today);
+// ============================================
+// INITIALIZATION
+// ============================================
 
-// Set default time to current time
-const now = new Date();
-const currentTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-todoTime.value = currentTime;
-
-// Initialize
-init();
-
-function init() {
+// Load data dari localStorage saat page load
+function loadTodos() {
+    const savedTodos = localStorage.getItem('todos');
+    if (savedTodos) {
+        todos = JSON.parse(savedTodos);
+    }
     renderTodos();
-    updateStats();
-    addEventListeners();
 }
 
-// Event Listeners
-function addEventListeners() {
-    todoForm.addEventListener('submit', handleAddTodo);
-    filterStatus.addEventListener('change', (e) => {
-        currentFilter = e.target.value;
-        renderTodos();
-    });
-    sortBy.addEventListener('change', (e) => {
-        currentSort = e.target.value;
-        renderTodos();
-    });
-    clearAllBtn.addEventListener('click', handleClearCompleted);
-    
-    // Real-time validation
-    todoText.addEventListener('blur', validateText);
-    todoDue.addEventListener('blur', validateDate);
-    todoTime.addEventListener('blur', validateTime);
+// Save todos ke localStorage
+function saveTodos() {
+    localStorage.setItem('todos', JSON.stringify(todos));
 }
 
-// Validation Functions
-function validateText() {
-    const value = todoText.value.trim();
-    if (value === '') {
-        todoText.classList.add('error');
-        textError.textContent = 'Task description is required';
-        return false;
-    } else if (value.length > 100) {
-        todoText.classList.add('error');
-        textError.textContent = 'Task must be 100 characters or less';
-        return false;
-    } else {
-        todoText.classList.remove('error');
-        textError.textContent = '';
-        return true;
-    }
-}
+// ============================================
+// FORM VALIDATION & SUBMISSION
+// ============================================
 
-function validateDate() {
-    const value = todoDue.value;
-    if (value === '') {
-        todoDue.classList.add('error');
-        dateError.textContent = 'Due date is required';
-        return false;
-    } else {
-        const selectedDate = new Date(value);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (selectedDate < today) {
-            todoDue.classList.add('error');
-            dateError.textContent = 'Due date cannot be in the past';
-            return false;
-        } else {
-            todoDue.classList.remove('error');
-            dateError.textContent = '';
-            return true;
-        }
-    }
-}
-
-function validateTime() {
-    const value = todoTime.value;
-    if (value === '') {
-        todoTime.classList.add('error');
-        timeError.textContent = 'Time is required';
-        return false;
-    } else {
-        todoTime.classList.remove('error');
-        timeError.textContent = '';
-        return true;
-    }
-}
-
-function validateForm() {
-    const isTextValid = validateText();
-    const isDateValid = validateDate();
-    const isTimeValid = validateTime();
-    return isTextValid && isDateValid && isTimeValid;
-}
-
-// Add Todo
-function handleAddTodo(e) {
+todoForm.addEventListener('submit', function(e) {
     e.preventDefault();
 
-    if (!validateForm()) {
+    // Validasi input
+    if (!todoInput.value.trim()) {
+        alert('❌ Task tidak boleh kosong!');
         return;
     }
 
-    const todo = {
+    if (!todoDate.value) {
+        alert('❌ Tanggal harus dipilih!');
+        return;
+    }
+
+    if (!todoTime.value) {
+        alert('❌ Jam harus dipilih!');
+        return;
+    }
+
+    // Validasi tanggal (tidak boleh tanggal kemarin)
+    const selectedDate = new Date(todoDate.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+        alert('❌ Tanggal tidak boleh lebih awal dari hari ini!');
+        return;
+    }
+
+    // Tambah todo baru
+    addTodo();
+});
+
+// ============================================
+// ADD TODO
+// ============================================
+
+function addTodo() {
+    const newTodo = {
         id: Date.now(),
-        text: todoText.value.trim(),
-        dueDate: todoDue.value,
-        dueTime: todoTime.value,
+        text: todoInput.value.trim(),
+        date: todoDate.value,
+        time: todoTime.value,
         completed: false,
         createdAt: new Date().toISOString()
     };
 
-    todos.push(todo);
+    todos.unshift(newTodo);
     saveTodos();
     renderTodos();
-    updateStats();
-    
+
     // Reset form
     todoForm.reset();
-    todoText.classList.remove('error');
-    todoDue.classList.remove('error');
-    todoTime.classList.remove('error');
-    textError.textContent = '';
-    dateError.textContent = '';
-    timeError.textContent = '';
-    const now = new Date();
-    const currentTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-    todoTime.value = currentTime;
-    todoText.focus();
+    setTodayDate();
+    setCurrentTime();
+
+    // Show success message
+    showNotification('✅ Task berhasil ditambahkan!');
 }
 
-// Toggle Todo Completion
+// ============================================
+// DELETE TODO
+// ============================================
+
+function deleteTodo(id) {
+    if (confirm('Apakah kamu yakin ingin menghapus task ini?')) {
+        todos = todos.filter(todo => todo.id !== id);
+        saveTodos();
+        renderTodos();
+        showNotification('🗑️ Task berhasil dihapus!');
+    }
+}
+
+// ============================================
+// TOGGLE COMPLETED STATUS
+// ============================================
+
 function toggleTodo(id) {
-    const todo = todos.find(t => t.id === id);
+    const todo = todos.find(todo => todo.id === id);
     if (todo) {
         todo.completed = !todo.completed;
         saveTodos();
         renderTodos();
-        updateStats();
     }
 }
 
-// Delete Todo
-function deleteTodo(id) {
-    if (confirm('Are you sure you want to delete this task?')) {
-        todos = todos.filter(t => t.id !== id);
-        saveTodos();
-        renderTodos();
-        updateStats();
-    }
-}
+// ============================================
+// FILTER & DISPLAY
+// ============================================
 
-// Clear Completed
-function handleClearCompleted() {
-    const completedTodos = todos.filter(t => t.completed);
-    
-    if (completedTodos.length === 0) {
-        alert('No completed tasks to clear');
-        return;
-    }
-
-    if (confirm(`Delete ${completedTodos.length} completed task(s)?`)) {
-        todos = todos.filter(t => !t.completed);
-        saveTodos();
-        renderTodos();
-        updateStats();
-    }
-}
-
-// Filter & Sort
-function getFilteredAndSortedTodos() {
+function getFilteredTodos() {
     let filtered = todos;
 
-    // Filter by status
-    if (currentFilter === 'pending') {
-        filtered = filtered.filter(t => !t.completed);
-    } else if (currentFilter === 'completed') {
-        filtered = filtered.filter(t => t.completed);
+    // Filter berdasarkan status
+    if (currentFilter === 'completed') {
+        filtered = filtered.filter(todo => todo.completed);
+    } else if (currentFilter === 'pending') {
+        filtered = filtered.filter(todo => !todo.completed);
     }
 
-    // Sort
-    const sorted = [...filtered];
-    switch (currentSort) {
-        case 'date-asc':
-            sorted.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-            break;
-        case 'date-desc':
-            sorted.sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate));
-            break;
-        case 'name-asc':
-            sorted.sort((a, b) => a.text.localeCompare(b.text));
-            break;
-        case 'name-desc':
-            sorted.sort((a, b) => b.text.localeCompare(a.text));
-            break;
+    // Filter berdasarkan tanggal
+    if (currentDateFilter) {
+        filtered = filtered.filter(todo => todo.date === currentDateFilter);
     }
 
-    return sorted;
+    return filtered;
 }
 
-// Render Todos
 function renderTodos() {
-    const filteredTodos = getFilteredAndSortedTodos();
+    const filteredTodos = getFilteredTodos();
+    
+    // Update task count
+    taskCount.textContent = todos.length;
+
+    // Clear list
     todoList.innerHTML = '';
 
     if (filteredTodos.length === 0) {
-        todoList.style.display = 'none';
-        emptyMessage.style.display = 'block';
+        todoList.innerHTML = '<p class="empty-message">Tidak ada task sesuai filter. 🎯</p>';
         return;
     }
 
-    todoList.style.display = 'block';
-    emptyMessage.style.display = 'none';
-
+    // Render each todo
     filteredTodos.forEach(todo => {
-        const li = document.createElement('li');
-        li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'todo-checkbox';
-        checkbox.checked = todo.completed;
-        checkbox.addEventListener('change', () => toggleTodo(todo.id));
-
-        const content = document.createElement('div');
-        content.className = 'todo-content';
-
-        const text = document.createElement('div');
-        text.className = 'todo-text';
-        text.textContent = todo.text;
-
-        const date = document.createElement('div');
-        date.className = 'todo-date';
-        date.innerHTML = `📅 ${formatDate(todo.dueDate)} · 🕐 ${formatTime(todo.dueTime)}`;
-
-        const status = document.createElement('span');
-        status.className = 'todo-status';
-        status.textContent = todo.completed ? '✓ Done' : '⏳ Pending';
-
-        content.appendChild(text);
-        content.appendChild(date);
-        content.appendChild(status);
-
-        const actions = document.createElement('div');
-        actions.className = 'todo-actions';
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'btn-delete';
-        deleteBtn.textContent = '🗑️ Delete';
-        deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
-
-        actions.appendChild(deleteBtn);
-
-        li.appendChild(checkbox);
-        li.appendChild(content);
-        li.appendChild(actions);
-        todoList.appendChild(li);
+        const todoItem = createTodoElement(todo);
+        todoList.appendChild(todoItem);
     });
 }
 
-// Update Stats
-function updateStats() {
-    const total = todos.length;
-    const completed = todos.filter(t => t.completed).length;
-    const pending = total - completed;
+// ============================================
+// CREATE TODO ELEMENT
+// ============================================
 
-    totalCount.textContent = total;
-    pendingCount.textContent = pending;
-    completedCount.textContent = completed;
+function createTodoElement(todo) {
+    const todoItem = document.createElement('div');
+    todoItem.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+
+    // Format date
+    const dateObj = new Date(todo.date + 'T00:00:00');
+    const formattedDate = dateObj.toLocaleDateString('id-ID', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+
+    // Format time
+    const timeParts = todo.time.split(':');
+    const formattedTime = `${timeParts[0]}:${timeParts[1]}`;
+
+    // Status text
+    const statusText = todo.completed ? 'Selesai' : 'Belum Selesai';
+    const statusClass = todo.completed ? 'completed' : 'pending';
+
+    todoItem.innerHTML = `
+        <input 
+            type="checkbox" 
+            class="todo-checkbox" 
+            ${todo.completed ? 'checked' : ''}
+            onchange="toggleTodo(${todo.id})"
+        >
+        <div class="todo-content">
+            <div class="todo-text">${escapeHtml(todo.text)}</div>
+            <div class="todo-date">📅 ${formattedDate} <span class="todo-time">🕐 ${formattedTime}</span></div>
+        </div>
+        <span class="todo-status ${statusClass}">${statusText}</span>
+        <button class="btn-delete" onclick="deleteTodo(${todo.id})">🗑️ Hapus</button>
+    `;
+
+    return todoItem;
 }
 
-// Format Date
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
+// ============================================
+// FILTER BUTTONS
+// ============================================
+
+filterButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+        // Remove active class from all buttons
+        filterButtons.forEach(b => b.classList.remove('active'));
+        
+        // Add active class to clicked button
+        this.classList.add('active');
+        
+        // Update filter
+        currentFilter = this.dataset.filter;
+        
+        // Re-render todos
+        renderTodos();
+    });
+});
+
+// ============================================
+// FILTER BY DATE
+// ============================================
+
+filterDateInput.addEventListener('change', function() {
+    currentDateFilter = this.value;
+    renderTodos();
+});
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+// Set today's date as default in input
+function setTodayDate() {
+    const today = new Date().toISOString().split('T')[0];
+    todoDate.value = today;
 }
 
-// Format Time
-function formatTime(timeString) {
-    const [hours, minutes] = timeString.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    return `${String(displayHour).padStart(2, '0')}:${minutes} ${ampm}`;
+// Set current time as default in input
+function setCurrentTime() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    todoTime.value = `${hours}:${minutes}`;
 }
 
-// Save to localStorage
-function saveTodos() {
-    localStorage.setItem('todos', JSON.stringify(todos));
+// Update jam digital di header
+function updateCurrentTime() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    currentTimeDisplay.textContent = `${hours}:${minutes}:${seconds}`;
 }
+
+// Show notification
+function showNotification(message) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #667eea;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        animation: slideInRight 0.3s ease-out;
+        font-weight: 600;
+    `;
+    notification.textContent = message;
+    
+    // Add animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ============================================
+// PAGE LOAD
+// ============================================
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    setTodayDate();
+    setCurrentTime();
+    loadTodos();
+    
+    // Update jam digital setiap detik
+    updateCurrentTime();
+    setInterval(updateCurrentTime, 1000);
+});
